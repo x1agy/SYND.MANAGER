@@ -11,6 +11,7 @@ export class InventoryService {
   private googleSheets: GoogleSheetsService;
   inventory: InventoryItem[] = [];
   writeEnabled: boolean = true;
+  emoji: { [key: string]: any } = {};
 
   constructor() {
     this.googleSheets = new GoogleSheetsService();
@@ -26,6 +27,10 @@ export class InventoryService {
     return this.inventory.find(
       (item) => item.name.toLowerCase() === name.toLowerCase()
     );
+  }
+
+  updateEmoji(emoji: { [key: string]: any }): void {
+    this.emoji = { ...this.emoji, ...emoji };
   }
 
   async updateItem(

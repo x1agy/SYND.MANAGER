@@ -54,7 +54,7 @@ const storageInteractionHandler = async (
         .getCurrentInventory()
         .filter((it) => it.name.toLowerCase().includes(focused))
         .slice(0, 25)
-        .map((it) => ({ name: `${it.emoji} ${it.name}`, value: it.name }));
+        .map((it) => ({ name: `${it.name}`, value: it.name }));
       await auto.respond(suggestions);
     }
     return;
@@ -63,14 +63,16 @@ const storageInteractionHandler = async (
 
   const { commandName } = interaction;
 
+  await interaction.deferReply({ ephemeral: true }).catch(() => null);
+
   try {
     switch (commandName) {
       case 'write': {
         if (!inventoryService.writeEnabled) {
-          await interaction.reply({
+          await interaction.editReply({
             content: 'Редактирование запрещено, проводится инвентаризация.',
-            ephemeral: true,
           });
+          return;
         }
 
         const name = interaction.options.getString('предмет', true);
@@ -82,9 +84,8 @@ const storageInteractionHandler = async (
         ).match(/\[.+\]/)?.[0];
 
         if (!userName) {
-          await interaction.reply({
+          await interaction.editReply({
             content: '❌ Приведите свой никнейм к единому формату - [ваше имя]',
-            ephemeral: true,
           });
           return;
         }
@@ -98,16 +99,14 @@ const storageInteractionHandler = async (
 
         if (success) {
           const item = inventoryService.getItemByName(name);
-          await interaction.reply({
+          await interaction.editReply({
             content: `✅ ${quantity > 0 ? 'Добавлено' : 'Взято'} ${quantity} ${
-              item?.name
-            }`,
-            ephemeral: true,
+              inventoryService.emoji[item?.emoji ?? ''] ?? ''
+            } ${item?.name}`,
           });
         } else {
-          await interaction.reply({
+          await interaction.editReply({
             content: '❌ Не удалось обновить инвентарь.',
-            ephemeral: true,
           });
         }
         break;
@@ -115,39 +114,47 @@ const storageInteractionHandler = async (
 
       case 'inv_start': {
         inventoryService.setWriteEnabled(false);
-        await interaction.reply({
+        await interaction.editReply({
           content:
             '⌛ Запущена инвентаризация склада, использование команды /write запрещено',
-          ephemeral: true,
         });
         break;
       }
 
       case 'inv_stop': {
         inventoryService.setWriteEnabled(true);
-        await interaction.reply({
+        await interaction.editReply({
           content:
             '✅ Инвентаризация склада окончена, использование команды /write разрешено',
-          ephemeral: true,
         });
         break;
       }
 
       case 'inv': {
         await inventoryService.loadInventory();
-        await interaction.reply({
+        await interaction.editReply({
           content: 'Данные обновлены',
-          ephemeral: true,
         });
         break;
       }
     }
   } catch (error) {
     console.error('Ошибка обработки команды:', error);
-    await interaction.reply({
-      content: '❌ Произошла ошибка при выполнении команды',
-      ephemeral: true,
-    });
+
+    try {
+      await interaction.editReply({
+        content: '❌ Произошла ошибка при выполнении команды',
+      });
+    } catch (e) {
+      try {
+        await interaction.followUp({
+          content: '❌ Произошла ошибка при выполнении команды',
+          ephemeral: true,
+        });
+      } catch (followUpError) {
+        console.error('Не удалось отправить ответ:', followUpError);
+      }
+    }
   }
 };
 
