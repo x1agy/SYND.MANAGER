@@ -11,7 +11,7 @@ import { InventoryService } from '../services/inventoryService';
 const getStorageCommands = () => {
   return [
     new SlashCommandBuilder()
-      .setName('write')
+      .setName('w')
       .setDescription('Обновить количество предмета')
       .addStringOption((option) =>
         option
@@ -67,7 +67,7 @@ const storageInteractionHandler = async (
 
   try {
     switch (commandName) {
-      case 'write': {
+      case 'w': {
         if (!inventoryService.writeEnabled) {
           await interaction.editReply({
             content: 'Редактирование запрещено, проводится инвентаризация.',
@@ -142,7 +142,7 @@ const storageInteractionHandler = async (
 
           inventoryService.updateEmoji(emojiObj);
         });
-        
+
         await interaction.editReply({
           content: 'Данные обновлены',
         });
