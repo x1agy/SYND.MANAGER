@@ -24,16 +24,6 @@ client.once('ready', async () => {
   await inventoryService.loadInventory();
 
   const commands = [...getStorageCommands()];
-  
-  client.guilds.cache.forEach((guild) => {
-    const emojiObj: { [key: string]: any } = {};
-
-    guild.emojis.cache.forEach((emoji) => {
-      emojiObj[`:${emoji.name}:`] = emoji;
-    });
-
-    inventoryService.updateEmoji(emojiObj);
-  });
 
   const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 

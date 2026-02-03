@@ -132,6 +132,17 @@ const storageInteractionHandler = async (
 
       case 'inv': {
         await inventoryService.loadInventory();
+
+        client.guilds.cache.forEach((guild) => {
+          const emojiObj: { [key: string]: any } = {};
+
+          guild.emojis.cache.forEach((emoji) => {
+            emojiObj[`:${emoji.name}:`] = emoji;
+          });
+
+          inventoryService.updateEmoji(emojiObj);
+        });
+        
         await interaction.editReply({
           content: 'Данные обновлены',
         });

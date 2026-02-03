@@ -58,7 +58,7 @@ export class InventoryService {
 
         const message = `
           🚨 **ВНИМАНИЕ: ОТРИЦАТЕЛЬНЫЙ ОСТАТОК!**
-          📦 **Предмет:** ${item.emoji || ''} ${item.name}
+          📦 **Предмет:** ${this.emoji[item.emoji ?? ''] ?? ''} ${item.name}
           👤 **Пользователь:** ${userName}
           📊 **Изменение:** ${change > 0 ? '+' : ''}${change}
           🧮 **Новый остаток:** ${newQuantity}
