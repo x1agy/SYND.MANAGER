@@ -11,6 +11,4 @@
  <hr />
 
  #### Для запуска:
- <code>
-    npm i && npm run dev
- </code>
+<code>npm i && npm run dev</code>
