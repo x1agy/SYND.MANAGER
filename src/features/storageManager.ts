@@ -29,11 +29,11 @@ const getStorageCommands = () => {
       .toJSON(),
     new SlashCommandBuilder()
       .setName('inv_start')
-      .setDescription('Запретить использование команды /write'),
+      .setDescription('Запретить использование команды /w'),
 
     new SlashCommandBuilder()
       .setName('inv_stop')
-      .setDescription('Разрешить использование команды /write'),
+      .setDescription('Разрешить использование команды /w'),
 
     new SlashCommandBuilder()
       .setName('inv')
@@ -48,7 +48,7 @@ const storageInteractionHandler = async (
 ) => {
   if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
     const auto = interaction as AutocompleteInteraction;
-    if (auto.commandName === 'write') {
+    if (auto.commandName === 'w') {
       const focused = String(auto.options.getFocused() ?? '').toLowerCase();
       const suggestions = inventoryService
         .getCurrentInventory()
@@ -116,7 +116,7 @@ const storageInteractionHandler = async (
         inventoryService.setWriteEnabled(false);
         await interaction.editReply({
           content:
-            '⌛ Запущена инвентаризация склада, использование команды /write запрещено',
+            '⌛ Запущена инвентаризация склада, использование команды /w запрещено',
         });
         break;
       }
@@ -125,7 +125,7 @@ const storageInteractionHandler = async (
         inventoryService.setWriteEnabled(true);
         await interaction.editReply({
           content:
-            '✅ Инвентаризация склада окончена, использование команды /write разрешено',
+            '✅ Инвентаризация склада окончена, использование команды /w разрешено',
         });
         break;
       }
