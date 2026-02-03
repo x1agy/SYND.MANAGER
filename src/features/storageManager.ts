@@ -1,12 +1,12 @@
 import {
   AutocompleteInteraction,
   CacheType,
+  Client,
   Interaction,
   InteractionType,
   SlashCommandBuilder,
 } from 'discord.js';
 import { InventoryService } from '../services/inventoryService';
-import { ADMIN_ROLE_ID } from '../constants/envVars';
 
 const getStorageCommands = () => {
   return [
@@ -43,7 +43,8 @@ const getStorageCommands = () => {
 
 const storageInteractionHandler = async (
   interaction: Interaction<CacheType>,
-  inventoryService: InventoryService
+  inventoryService: InventoryService,
+  client: Client
 ) => {
   if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
     const auto = interaction as AutocompleteInteraction;
@@ -74,20 +75,25 @@ const storageInteractionHandler = async (
 
         const name = interaction.options.getString('предмет', true);
         const quantity = interaction.options.getInteger('количество', true);
-        const userName = ('nickname' in interaction.member! ? interaction.member?.nickname ?? '' : '').match(/\[.+\]/)?.[0];
+        const userName = (
+          'nickname' in interaction.member!
+            ? interaction.member?.nickname ?? ''
+            : ''
+        ).match(/\[.+\]/)?.[0];
 
-        if(!userName){
-            await interaction.reply({
+        if (!userName) {
+          await interaction.reply({
             content: '❌ Приведите свой никнейм к единому формату - [ваше имя]',
             ephemeral: true,
           });
-          return
+          return;
         }
 
         const success = await inventoryService.updateItem(
           name,
           quantity,
           `${userName} ${interaction.user.id}`,
+          client
         );
 
         if (success) {
@@ -108,57 +114,26 @@ const storageInteractionHandler = async (
       }
 
       case 'inv_start': {
-        const member = await interaction.guild?.members.fetch(
-          interaction.user.id
-        );
-        if (!member?.roles.cache.has(ADMIN_ROLE_ID)) {
-          await interaction.reply({
-            content: '❌ У вас нет прав для выполнения этой команды',
-            ephemeral: true,
-          });
-          return;
-        }
-
         inventoryService.setWriteEnabled(false);
         await interaction.reply({
-          content: '⛔ Использование команды /write запрещено',
+          content:
+            '⌛ Запущена инвентаризация склада, использование команды /write запрещено',
           ephemeral: true,
         });
         break;
       }
 
       case 'inv_stop': {
-        const member = await interaction.guild?.members.fetch(
-          interaction.user.id
-        );
-        if (!member?.roles.cache.has(ADMIN_ROLE_ID)) {
-          await interaction.reply({
-            content: '❌ У вас нет прав для выполнения этой команды',
-            ephemeral: true,
-          });
-          return;
-        }
-
         inventoryService.setWriteEnabled(true);
         await interaction.reply({
-          content: '✅ Использование команды /write разрешено',
+          content:
+            '✅ Инвентаризация склада окончена, использование команды /write разрешено',
           ephemeral: true,
         });
         break;
       }
 
       case 'inv': {
-        const member = await interaction.guild?.members.fetch(
-          interaction.user.id
-        );
-        if (!member?.roles.cache.has(ADMIN_ROLE_ID)) {
-          await interaction.reply({
-            content: '❌ У вас нет прав для выполнения этой команды',
-            ephemeral: true,
-          });
-          return;
-        }
-
         await inventoryService.loadInventory();
         await interaction.reply({
           content: 'Данные обновлены',

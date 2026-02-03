@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
 import { InventoryService } from './services/inventoryService';
 import {
   getStorageCommands,
@@ -10,8 +10,10 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
   ],
+  partials: [Partials.User, Partials.GuildMember],
 });
 
 const inventoryService = new InventoryService();
@@ -34,7 +36,7 @@ client.once('ready', async () => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-  storageInteractionHandler(interaction, inventoryService);
+  storageInteractionHandler(interaction, inventoryService, client);
 });
 
 client.on('error', console.error);
