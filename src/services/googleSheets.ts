@@ -6,6 +6,20 @@ export class GoogleSheetsService {
   private sheets;
   private spreadsheetId: string;
 
+  private getMoscowTime(): string {
+    const now = new Date();
+    return new Intl.DateTimeFormat('ru-RU', {
+      timeZone: 'Europe/Moscow',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(now);
+  }
+
   constructor() {
     const auth = new google.auth.GoogleAuth({
       credentials: JSON.parse(GOOGLE_API),
@@ -86,7 +100,7 @@ export class GoogleSheetsService {
     note: string = ''
   ): Promise<void> {
     try {
-      const timestamp = new Date().toLocaleString('ru-RU');
+      const timestamp = this.getMoscowTime();
 
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
@@ -103,7 +117,7 @@ export class GoogleSheetsService {
 
   async addHistoryEntry(itemName: string, quantity: number): Promise<void> {
     try {
-      const timestamp = new Date().toLocaleString('ru-RU');
+      const timestamp = this.getMoscowTime();
 
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
