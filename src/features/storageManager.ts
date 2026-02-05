@@ -12,19 +12,71 @@ const getStorageCommands = () => {
   return [
     new SlashCommandBuilder()
       .setName('w')
-      .setDescription('Обновить количество предмета')
+      .setDescription('Обновить количество предметов')
       .addStringOption((option) =>
         option
-          .setName('предмет')
-          .setDescription('Выберите предмет')
+          .setName('предмет1')
+          .setDescription('Первый предмет (обязательный)')
           .setRequired(true)
           .setAutocomplete(true)
       )
       .addIntegerOption((option) =>
         option
-          .setName('количество')
-          .setDescription('Количество (положительное/отрицательное)')
+          .setName('количество1')
+          .setDescription('Количество первого предмета')
           .setRequired(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName('предмет2')
+          .setDescription('Второй предмет (опционально)')
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
+      .addIntegerOption((option) =>
+        option
+          .setName('количество2')
+          .setDescription('Количество второго предмета')
+          .setRequired(false)
+      )
+      .addStringOption((option) =>
+        option
+          .setName('предмет3')
+          .setDescription('Третий предмет (опционально)')
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
+      .addIntegerOption((option) =>
+        option
+          .setName('количество3')
+          .setDescription('Количество третьего предмета')
+          .setRequired(false)
+      )
+      .addStringOption((option) =>
+        option
+          .setName('предмет4')
+          .setDescription('Четвертый предмет (опционально)')
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
+      .addIntegerOption((option) =>
+        option
+          .setName('количество4')
+          .setDescription('Количество четвертого предмета')
+          .setRequired(false)
+      )
+      .addStringOption((option) =>
+        option
+          .setName('предмет5')
+          .setDescription('Пятый предмет (опционально)')
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
+      .addIntegerOption((option) =>
+        option
+          .setName('количество5')
+          .setDescription('Количество пятого предмета')
+          .setRequired(false)
       )
       .toJSON(),
     new SlashCommandBuilder()
@@ -75,8 +127,6 @@ const storageInteractionHandler = async (
           return;
         }
 
-        const name = interaction.options.getString('предмет', true);
-        const quantity = interaction.options.getInteger('количество', true);
         const userName = (
           'nickname' in interaction.member!
             ? interaction.member?.nickname ?? ''
@@ -90,25 +140,68 @@ const storageInteractionHandler = async (
           return;
         }
 
-        const success = await inventoryService.updateItem(
-          name,
-          quantity,
-          `${userName} ${interaction.user.id}`,
-          client
-        );
+        const itemUpdates = [];
+        const user = `${userName} ${interaction.user.id}`;
 
-        if (success) {
-          const item = inventoryService.getItemByName(name);
-          await interaction.editReply({
-            content: `✅ ${quantity > 0 ? 'Добавлено' : 'Взято'} ${quantity} ${
-              inventoryService.emoji[item?.emoji ?? ''] ?? ''
-            } ${item?.name}`,
-          });
-        } else {
-          await interaction.editReply({
-            content: '❌ Не удалось обновить инвентарь.',
-          });
+        for (let i = 1; i <= 5; i++) {
+          const itemName = interaction.options.getString(`предмет${i}`);
+          const quantity = interaction.options.getInteger(`количество${i}`);
+
+          if (i === 1) {
+            if (!itemName || quantity === null) {
+              await interaction.editReply({
+                content: '❌ Первый предмет и его количество обязательны!',
+              });
+              return;
+            }
+            itemUpdates.push({ name: itemName, quantity });
+          } else if (itemName && quantity !== null) {
+            itemUpdates.push({ name: itemName, quantity });
+          } else if (
+            (itemName && quantity === null) ||
+            (!itemName && quantity !== null)
+          ) {
+            await interaction.editReply({
+              content: `❌ Для предмета #${i} указан только один параметр!`,
+            });
+            return;
+          }
         }
+
+        const results = [];
+        const errors = [];
+
+        // Обновляем каждый предмет
+        for (const update of itemUpdates) {
+          const success = await inventoryService.updateItem(
+            update.name,
+            update.quantity,
+            user,
+            client
+          );
+
+          if (success) {
+            const item = inventoryService.getItemByName(update.name);
+            const action = update.quantity > 0 ? 'Добавлено' : 'Взято';
+            const emoji = inventoryService.emoji[item?.emoji ?? ''] ?? '';
+            results.push(`${action} ${update.quantity} ${emoji} ${item?.name}`);
+          } else {
+            errors.push(`❌ Не удалось обновить предмет: ${update.name}`);
+          }
+        }
+
+        let message = '';
+        if (results.length > 0) {
+          message += `✅ **Обновлено ${results.length} предмет(а/ов):**\n`;
+          message += results.map((r) => `• ${r}`).join('\n');
+        }
+        if (errors.length > 0) {
+          message += `\n\n**Ошибки:**\n${errors.join('\n')}`;
+        }
+
+        await interaction.editReply({
+          content: message,
+        });
         break;
       }
 
