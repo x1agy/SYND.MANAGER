@@ -43,6 +43,8 @@ export class InventoryService {
       return false;
     }
 
+    await this.loadInventory();
+
     const item = this.getItemByName(name);
     if (!item) {
       return false;
@@ -83,8 +85,6 @@ export class InventoryService {
     const action = change > 0 ? 'положил' : 'взял';
     await this.googleSheets.addLogEntry(userName, action, item.name, change);
     await this.googleSheets.addHistoryEntry(item.name, newQuantity);
-
-    await this.loadInventory();
 
     return true;
   }
