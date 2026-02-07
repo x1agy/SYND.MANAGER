@@ -9,83 +9,58 @@ import {
 import { InventoryService } from '../services/inventoryService';
 
 const getStorageCommands = () => {
-  return [
-    new SlashCommandBuilder()
-      .setName('w')
-      .setDescription('Обновить количество предметов')
-      .addStringOption((option) =>
-        option
-          .setName('предмет1')
-          .setDescription('Первый предмет (обязательный)')
-          .setRequired(true)
-          .setAutocomplete(true)
-      )
-      .addIntegerOption((option) =>
-        option
-          .setName('количество1')
-          .setDescription('Количество первого предмета')
-          .setRequired(true)
-      )
-      .addStringOption((option) =>
-        option
-          .setName('предмет2')
-          .setDescription('Второй предмет (опционально)')
-          .setRequired(false)
-          .setAutocomplete(true)
-      )
-      .addIntegerOption((option) =>
-        option
-          .setName('количество2')
-          .setDescription('Количество второго предмета')
-          .setRequired(false)
-      )
-      .addStringOption((option) =>
-        option
-          .setName('предмет3')
-          .setDescription('Третий предмет (опционально)')
-          .setRequired(false)
-          .setAutocomplete(true)
-      )
-      .addIntegerOption((option) =>
-        option
-          .setName('количество3')
-          .setDescription('Количество третьего предмета')
-          .setRequired(false)
-      )
-      .addStringOption((option) =>
-        option
-          .setName('предмет4')
-          .setDescription('Четвертый предмет (опционально)')
-          .setRequired(false)
-          .setAutocomplete(true)
-      )
-      .addIntegerOption((option) =>
-        option
-          .setName('количество4')
-          .setDescription('Количество четвертого предмета')
-          .setRequired(false)
-      )
-      .addStringOption((option) =>
-        option
-          .setName('предмет5')
-          .setDescription('Пятый предмет (опционально)')
-          .setRequired(false)
-          .setAutocomplete(true)
-      )
-      .addIntegerOption((option) =>
-        option
-          .setName('количество5')
-          .setDescription('Количество пятого предмета')
-          .setRequired(false)
-      )
-      .toJSON(),
-    new SlashCommandBuilder()
-      .setName('inv_start')
-      .setDescription('Запретить использование команды /w'),
+  const addCommand = (name: string) => {
+    return new SlashCommandBuilder()
+      .setName(name)
+      .setDescription('Обновить количество предметов');
+  };
 
-    new SlashCommandBuilder()
-      .setName('inv_stop')
-      .setDescription('Разрешить использование команды /w'),
+  const addOptions = (command: SlashCommandBuilder) => {
+    for (let i = 0; i < 5; i++) {
+      if (i === 0) {
+        command
+          .addStringOption((option) =>
+            option
+              .setName('предмет1')
+              .setDescription('первый предмет (обязательный)')
+              .setRequired(true)
+              .setAutocomplete(true)
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName('количество1')
+              .setRequired(true)
+              .setDescription(`количество 1 предмета`)
+          );
+      } else {
+        command
+          .addStringOption((option) =>
+            option
+              .setName('предмет' + (i + 1))
+              .setDescription(`${i + 1} предмет`)
+              .setAutocomplete(true)
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName('количество' + (i + 1))
+              .setDescription(`количество ${i + 1} предмета`)
+          );
+      }
+    }
+
+    return command;
+  };
+
+  return [
+    addOptions(addCommand('w')).toJSON(),
+    addOptions(addCommand('i')).toJSON(),
+    // new SlashCommandBuilder()
+    //   .setName('inv_start')
+    //   .setDescription('Запретить использование команды /w'),
+
+    // new SlashCommandBuilder()
+    //   .setName('inv_stop')
+    //   .setDescription('Разрешить использование команды /w'),
 
     new SlashCommandBuilder()
       .setName('inv')
@@ -100,7 +75,7 @@ const storageInteractionHandler = async (
 ) => {
   if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
     const auto = interaction as AutocompleteInteraction;
-    if (auto.commandName === 'w') {
+    if (auto.commandName === 'w' || auto.commandName === 'i') {
       const focused = String(auto.options.getFocused() ?? '').toLowerCase();
       const suggestions = inventoryService
         .getCurrentInventory()
@@ -115,12 +90,13 @@ const storageInteractionHandler = async (
 
   const { commandName } = interaction;
 
-  await interaction.deferReply({ ephemeral: true }).catch(() => null);
+  await interaction.deferReply({ ephemeral: false }).catch(() => null);
 
   try {
-    switch (commandName) {
-      case 'w': {
-        if (!inventoryService.writeEnabled) {
+    if (commandName === 'w' || commandName === 'i') {
+      {
+        const isInv = commandName === 'i';
+        if (!inventoryService.writeEnabled && !isInv) {
           await interaction.editReply({
             content: 'Редактирование запрещено, проводится инвентаризация.',
           });
@@ -147,6 +123,13 @@ const storageInteractionHandler = async (
           const itemName = interaction.options.getString(`предмет${i}`);
           const quantity = interaction.options.getInteger(`количество${i}`);
 
+          if (isInv && (quantity ?? 0) < 0) {
+            await interaction.editReply({
+              content:
+                '❌ Отрицательные значения невозможны при инвентаризации',
+            });
+          }
+
           if (i === 1) {
             if (!itemName || quantity === null) {
               await interaction.editReply({
@@ -171,20 +154,24 @@ const storageInteractionHandler = async (
         const results = [];
         const errors = [];
 
-        // Обновляем каждый предмет
         for (const update of itemUpdates) {
           const success = await inventoryService.updateItem(
             update.name,
             update.quantity,
             user,
-            client
+            client,
+            isInv
           );
 
           if (success) {
             const item = inventoryService.getItemByName(update.name);
             const action = update.quantity > 0 ? 'Добавлено' : 'Взято';
             const emoji = inventoryService.emoji[item?.emoji ?? ''] ?? '';
-            results.push(`${action} ${update.quantity} ${emoji} ${item?.name}`);
+            results.push(
+              `${isInv ? 'Инвентаризировано' : action} ${
+                update.quantity
+              } ${emoji} ${item?.name}`
+            );
           } else {
             errors.push(`❌ Не удалось обновить предмет: ${update.name}`);
           }
@@ -202,9 +189,11 @@ const storageInteractionHandler = async (
         await interaction.editReply({
           content: message,
         });
-        break;
+        return;
       }
+    }
 
+    switch (commandName) {
       case 'inv_start': {
         inventoryService.setWriteEnabled(false);
         await interaction.editReply({

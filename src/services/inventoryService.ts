@@ -37,20 +37,19 @@ export class InventoryService {
     name: string,
     change: number,
     userName: string,
-    discordClient: Client
+    discordClient: Client,
+    isInvent: boolean
   ): Promise<boolean> {
     if (!this.writeEnabled) {
       return false;
     }
-
-    await this.loadInventory();
 
     const item = this.getItemByName(name);
     if (!item) {
       return false;
     }
 
-    const newQuantity = (item.quantity ?? 0) + change;
+    const newQuantity = isInvent ? change : (item.quantity ?? 0) + change;
 
     if (newQuantity < 0) {
       try {
@@ -82,8 +81,17 @@ export class InventoryService {
       return false;
     }
 
-    const action = change > 0 ? 'положил' : 'взял';
-    await this.googleSheets.addLogEntry(userName, action, item.name, change);
+    if (isInvent) {
+      await this.googleSheets.addLogEntry(
+        userName,
+        'инвентаризация',
+        item.name,
+        change
+      );
+    } else {
+      const action = change > 0 ? 'положил' : 'взял';
+      await this.googleSheets.addLogEntry(userName, action, item.name, change);
+    }
     await this.googleSheets.addHistoryEntry(item.name, newQuantity);
 
     return true;
