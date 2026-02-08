@@ -90,7 +90,7 @@ const storageInteractionHandler = async (
 
   const { commandName } = interaction;
 
-  await interaction.deferReply({ ephemeral: false }).catch(() => null);
+  await interaction.deferReply({ ephemeral: true }).catch(() => null);
 
   try {
     if (commandName === 'w' || commandName === 'i') {
