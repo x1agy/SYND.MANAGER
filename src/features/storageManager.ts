@@ -63,7 +63,7 @@ const getStorageCommands = () => {
     //   .setDescription('Разрешить использование команды /w'),
 
     new SlashCommandBuilder()
-      .setName('inv')
+      .setName('update_emoji')
       .setDescription('Обновить данные бота'),
   ];
 };
@@ -214,7 +214,7 @@ const storageInteractionHandler = async (
         break;
       }
 
-      case 'inv': {
+      case 'update_emoji': {
         await inventoryService.loadInventory();
 
         client.guilds.cache.forEach((guild) => {
