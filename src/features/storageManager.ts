@@ -154,6 +154,8 @@ const storageInteractionHandler = async (
         const results = [];
         const errors = [];
 
+        await inventoryService.loadInventory();
+
         for (const update of itemUpdates) {
           const success = await inventoryService.updateItem(
             update.name,

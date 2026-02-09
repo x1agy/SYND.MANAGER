@@ -94,8 +94,6 @@ export class InventoryService {
     }
     await this.googleSheets.addHistoryEntry(item.name, newQuantity);
 
-    await this.loadInventory();
-
     return true;
   }
 
