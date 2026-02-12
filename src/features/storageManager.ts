@@ -161,7 +161,6 @@ const storageInteractionHandler = async (
             update.name,
             update.quantity,
             user,
-            client,
             isInv
           );
 

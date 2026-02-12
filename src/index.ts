@@ -16,12 +16,13 @@ const client = new Client({
   partials: [Partials.User, Partials.GuildMember],
 });
 
-const inventoryService = new InventoryService();
+const inventoryService = new InventoryService(client);
 
 client.once('ready', async () => {
   console.log(`✅ Бот запущен как ${client.user?.tag}`);
 
   await inventoryService.loadInventory();
+  await inventoryService.init();
 
   const commands = [...getStorageCommands()];
 
