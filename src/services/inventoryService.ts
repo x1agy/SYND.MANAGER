@@ -1,5 +1,6 @@
 import { Client, TextChannel } from 'discord.js';
 import { GoogleSheetsService } from './googleSheets';
+import { ALERT_CHAT_ID } from '../constants/envVars';
 
 export interface InventoryItem {
   name: string;
@@ -54,7 +55,7 @@ export class InventoryService {
     if (newQuantity < 0) {
       try {
         const channel = (await discordClient.channels.fetch(
-          '1468224396375363696'
+          ALERT_CHAT_ID
         )) as TextChannel;
 
         const message = `
