@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { storageSheetsPath } from '../constants/storage';
 import { GOOGLE_API, GOOGLE_SHEET_ID } from '../constants/envVars';
+import { InventoryItem } from '../types/inventory';
 
 export class GoogleSheetsService {
   private sheets;
@@ -30,20 +31,19 @@ export class GoogleSheetsService {
     this.spreadsheetId = GOOGLE_SHEET_ID;
   }
 
-  async getInventory(): Promise<
-    Array<{ name: string; quantity: number; emoji: string }>
-  > {
+  async getInventory(): Promise<Array<InventoryItem>> {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${storageSheetsPath.storage}!A2:C`,
+        range: `${storageSheetsPath.storage}!A2:D`,
       });
 
       const rows = response.data.values || [];
       return rows.map((row) => ({
-        name: row[0] || '',
+        name: row[0] ?? '',
         quantity: parseInt(row[1]) || 0,
-        emoji: row[2] || '',
+        emoji: row[2] ?? '',
+        category: row[3] ?? '',
       }));
     } catch (error) {
       console.error('Ошибка при чтении инвентаря:', error);

@@ -1,26 +1,22 @@
-import {
-  Client,
-  TextChannel,
-  Message,
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  ComponentType,
-  InteractionCollector,
-  ButtonInteraction,
-  CacheType,
-} from 'discord.js';
+import { Client, TextChannel, Message, EmbedBuilder } from 'discord.js';
 import { GoogleSheetsService } from './googleSheets';
 import { ALERT_CHAT_ID, STORAGE_CHAT_ID } from '../constants/envVars';
+import { InventoryItem } from '../types/inventory';
 
-export interface InventoryItem {
-  name: string;
-  quantity?: number;
-  emoji?: string;
+function stringToHexColor(str: string): `#${string}` {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const hex = (hash >>> 0).toString(16);
+  const colorHex = hex.slice(-6).padStart(6, '0');
+  return `#${colorHex}`;
 }
 
-const ITEMS_PER_PAGE = 24;
+const ITEMS_PER_EMBED = 25;
+const hrImage =
+  'https://cdn.discordapp.com/attachments/666640006202261525/1471896340429803733/synd_bot_000023424.png?ex=699099ca&is=698f484a&hm=2a903b82bdb5b8573671f7f1404a81146a72224bdc09b19188f1116bfac1d1f1';
 
 export class InventoryService {
   private googleSheets: GoogleSheetsService;
@@ -29,11 +25,7 @@ export class InventoryService {
   emoji: { [key: string]: any } = {};
   discordClient: Client;
   storageChannel?: TextChannel;
-  private inventoryMessage?: Message;
-  private currentPage: number = 0;
-  private currentCollector:
-    | InteractionCollector<ButtonInteraction<CacheType>>
-    | undefined;
+  private inventoryMessages: Map<string, Message> = new Map();
 
   constructor(client: Client) {
     this.googleSheets = new GoogleSheetsService();
@@ -51,7 +43,7 @@ export class InventoryService {
       this.storageChannel = ch as TextChannel;
 
       await this.purgeBotMessages();
-      await this.postInventoryMessage(0);
+      await this.postInventoryMessages();
     } catch (error) {
       console.error('InventoryService.init error:', error);
     }
@@ -59,20 +51,30 @@ export class InventoryService {
 
   async purgeBotMessages(): Promise<void> {
     if (!this.storageChannel) return;
-    const fetched = await this.storageChannel.messages.fetch({ limit: 100 });
-    const botId = this.discordClient.user?.id;
-    if (!botId) return;
-    const botMessages = fetched.filter((m) => m.author?.id === botId);
+    try {
+      const fetched = await this.storageChannel.messages.fetch({ limit: 100 });
+      const botId = this.discordClient.user?.id;
+      if (!botId) return;
+      const botMessages = fetched.filter((m) => m.author?.id === botId);
 
-    for (const m of botMessages.values()) {
-      await m.delete();
+      for (const m of botMessages.values()) {
+        try {
+          await m.delete();
+        } catch (err) {
+          console.warn('Failed to delete message', m.id, err);
+        }
+      }
+
+      this.inventoryMessages.clear();
+    } catch (err) {
+      console.warn('Failed to purge bot messages:', err);
     }
   }
 
   async loadInventory(): Promise<void> {
     this.inventory = await this.googleSheets.getInventory();
     if (this.storageChannel) {
-      await this.postInventoryMessage(this.currentPage ?? 0);
+      await this.postInventoryMessages();
     }
   }
 
@@ -99,12 +101,11 @@ export class InventoryService {
     const newQuantity = isInvent ? change : (item.quantity ?? 0) + change;
 
     if (newQuantity < 0) {
-      try {
-        const channel = (await this.discordClient.channels.fetch(
-          ALERT_CHAT_ID
-        )) as TextChannel;
+      const channel = (await this.discordClient.channels.fetch(
+        ALERT_CHAT_ID
+      )) as TextChannel;
 
-        const message = `
+      const message = `
           🚨 **ВНИМАНИЕ: ОТРИЦАТЕЛЬНЫЙ ОСТАТОК!**
           📦 **Предмет:** ${this.emoji[item.emoji ?? ''] ?? ''} ${item.name}
           👤 **Пользователь:** ${userName}
@@ -114,10 +115,7 @@ export class InventoryService {
           <@&1467630587803209901>
         `.trim();
 
-        await channel.send(message);
-      } catch (error) {
-        console.error('❌ Ошибка при отправке уведомления:', error);
-      }
+      await channel.send(message);
     }
 
     const success = await this.googleSheets.updateInventory(
@@ -139,6 +137,10 @@ export class InventoryService {
     }
     await this.googleSheets.addHistoryEntry(item.name, newQuantity);
 
+    setTimeout(() => {
+      this.loadInventory();
+    });
+
     return true;
   }
 
@@ -150,139 +152,96 @@ export class InventoryService {
     this.writeEnabled = enabled;
   }
 
-  private async postInventoryMessage(page = 0): Promise<void> {
+  private async postInventoryMessages(): Promise<void> {
     if (!this.storageChannel) return;
-    const payload = this.getPayloadForPage(page);
+    const grouped = this.buildCategoryEmbeds();
 
-    try {
-      if (this.inventoryMessage) {
-        try {
-          this.inventoryMessage = await this.inventoryMessage.edit({
-            embeds: payload.embeds,
-            components: payload.components,
+    const newKeys: string[] = [];
+
+    for (const { category, embeds } of grouped) {
+      const safeCat = encodeURIComponent(category);
+      for (let idx = 0; idx < embeds.length; idx++) {
+        const embed = embeds[idx]!;
+        const key = `${safeCat}::${idx}`;
+        newKeys.push(key);
+
+        const existing = this.inventoryMessages.get(key);
+        if (existing) {
+          const edited = await existing.edit({ embeds: [embed] });
+          this.inventoryMessages.set(key, edited);
+        } else {
+          const sent = await this.storageChannel.send({
+            embeds: [embed],
           });
-        } catch (e) {
-          await this.inventoryMessage.delete().catch(() => {});
-          this.inventoryMessage = await this.storageChannel.send({
-            embeds: payload.embeds,
-            components: payload.components,
-          });
+          this.inventoryMessages.set(key, sent);
         }
-      } else {
-        this.inventoryMessage = await this.storageChannel.send({
-          embeds: payload.embeds,
-          components: payload.components,
-        });
       }
+    }
 
-      this.currentPage = payload.page;
-      this.attachCollectorToInventoryMessage();
-    } catch (err) {
-      console.error(
-        'Ошибка при публикации/редактировании сообщения склада:',
-        err
-      );
+    for (const [key, msg] of Array.from(this.inventoryMessages.entries())) {
+      if (!newKeys.includes(key)) {
+        await msg.delete().catch(() => {});
+        this.inventoryMessages.delete(key);
+      }
     }
   }
 
-  private attachCollectorToInventoryMessage(): void {
-    if (!this.inventoryMessage) return;
+  private buildCategoryEmbeds(): {
+    category: string;
+    embeds: EmbedBuilder[];
+  }[] {
+    const items = this.inventory.slice().sort((a, b) => {
+      const ca = (a.category ?? '').localeCompare(b.category ?? '', 'ru');
+      if (ca !== 0) return ca;
+      return a.name.localeCompare(b.name, 'ru');
+    });
 
-    if (this.currentCollector && !this.currentCollector.ended) {
-      this.currentCollector.stop();
+    const map = new Map<string, InventoryItem[]>();
+    for (const it of items) {
+      const cat = (it.category ?? 'Без категории').trim() || 'Без категории';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(it);
     }
 
-    this.currentCollector =
-      this.inventoryMessage.createMessageComponentCollector({
-        componentType: ComponentType.Button,
-        time: 1000 * 60 * 60,
-      });
+    const result: { category: string; embeds: EmbedBuilder[] }[] = [];
 
-    this.currentCollector.on('collect', async (interaction) => {
-      if (!interaction.isButton()) return;
-      const id = interaction.customId;
+    for (const [category, arr] of map.entries()) {
+      const totalPages = Math.max(1, Math.ceil(arr.length / ITEMS_PER_EMBED));
+      for (let i = 0; i < arr.length; i += ITEMS_PER_EMBED) {
+        const chunk = arr.slice(i, i + ITEMS_PER_EMBED);
 
-      try {
-        if (id === 'inventory_prev') {
-          this.currentPage = Math.max(0, (this.currentPage || 0) - 1);
-        } else if (id === 'inventory_next') {
-          this.currentPage = (this.currentPage || 0) + 1;
+        const pageIndex = Math.floor(i / ITEMS_PER_EMBED) + 1;
+        const embed = new EmbedBuilder()
+          .setTitle(
+            `${category}${
+              totalPages > 1 ? ` — часть ${pageIndex}/${totalPages}` : ''
+            }`
+          )
+          .setColor(stringToHexColor(category))
+          .setTimestamp(new Date())
+          .setFooter({
+            text: `Предметов в категории: ${arr.length}`,
+          });
+
+        for (const it of chunk) {
+          const qty =
+            typeof it.quantity === 'number' ? String(it.quantity) : '—';
+          const emoji = this.emoji[it.emoji ?? ''] ?? '';
+          const name = `${emoji ? emoji + ' ' : ''}${it.name}`.slice(0, 256);
+          const value = `Количество: **${qty}**`.slice(0, 1024);
+          embed.addFields({ name, value, inline: true });
         }
 
-        const payload = this.getPayloadForPage(this.currentPage);
-        await interaction.update({
-          embeds: payload.embeds,
-          components: payload.components,
-        });
+        embed.setImage(hrImage);
 
-        this.inventoryMessage = interaction.message;
-        this.currentPage = payload.page;
-      } catch (err) {
-        console.error('Ошибка при обработке кнопки склада:', err);
-        await interaction.reply({
-          content: 'Ошибка при обработке нажатия хуй',
-          ephemeral: true,
-        });
+        const existing = result.find((r) => r.category === category);
+        if (existing) {
+          existing.embeds.push(embed);
+        } else {
+          result.push({ category, embeds: [embed] });
+        }
       }
-    });
-
-    this.currentCollector.on('end', () => {
-      this.currentCollector = undefined;
-    });
-  }
-
-  private getPayloadForPage(page = 0) {
-    let items = this.inventory.slice();
-
-    const pages: EmbedBuilder[] = [];
-    for (let i = 0; i < items.length; i += ITEMS_PER_PAGE) {
-      const pageItems = items.slice(i, i + ITEMS_PER_PAGE);
-      const embed = new EmbedBuilder()
-        .setTitle('📦 Склад / Инвентарь')
-        .setColor('#2F3136')
-        .setTimestamp(new Date())
-        .setFooter({
-          text: `Показаны ${i + 1}-${i + pageItems.length + 1} из ${
-            items.length + 1
-          }`,
-        });
-
-      for (const it of pageItems) {
-        const qty = typeof it.quantity === 'number' ? String(it.quantity) : '—';
-        const emoji = this.emoji[it.emoji ?? ''];
-        embed.addFields({
-          name: `${emoji ? emoji + ' ' : ''}${it.name}`,
-          value: `Количество: **${qty}**`,
-          inline: true,
-        });
-      }
-      pages.push(embed);
     }
-    const maxPage = pages.length - 1;
-    const safePage = Math.min(Math.max(0, page), maxPage);
-
-    const prevBtn = new ButtonBuilder()
-      .setCustomId('inventory_prev')
-      .setLabel('◀️ Назад')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(safePage <= 0);
-
-    const nextBtn = new ButtonBuilder()
-      .setCustomId('inventory_next')
-      .setLabel('Вперёд ▶️')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(safePage >= maxPage);
-
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      prevBtn,
-      nextBtn
-    );
-
-    return {
-      embeds: [pages[safePage]!],
-      components: [row],
-      page: safePage,
-      maxPage,
-    };
+    return result;
   }
 }
