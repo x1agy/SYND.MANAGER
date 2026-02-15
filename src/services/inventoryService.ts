@@ -2,6 +2,7 @@ import { Client, TextChannel, Message, EmbedBuilder } from 'discord.js';
 import { GoogleSheetsService } from './googleSheets';
 import { ALERT_CHAT_ID, STORAGE_CHAT_ID } from '../constants/envVars';
 import { InventoryItem } from '../types/inventory';
+import { storageCategoriesOrder } from '../constants/storage';
 
 function stringToHexColor(str: string): `#${string}` {
   let hash = 0;
@@ -191,8 +192,22 @@ export class InventoryService {
     embeds: EmbedBuilder[];
   }[] {
     const items = this.inventory.slice().sort((a, b) => {
-      const ca = (a.category ?? '').localeCompare(b.category ?? '', 'ru');
-      if (ca !== 0) return ca;
+      const catA = a.category ?? '';
+      const catB = b.category ?? '';
+
+      const indexA = storageCategoriesOrder.indexOf(catA);
+      const indexB = storageCategoriesOrder.indexOf(catB);
+
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+
+      if (indexA !== -1) return -1;
+
+      if (indexB !== -1) return 1;
+
+      const categoryComparison = catA.localeCompare(catB, 'ru');
+      if (categoryComparison !== 0) return categoryComparison;
       return a.name.localeCompare(b.name, 'ru');
     });
 

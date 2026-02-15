@@ -4,4 +4,14 @@ const storageSheetsPath = {
     itemsHistory: 'История ресурса'
 } as const
 
-export {storageSheetsPath}
+const storageCategoriesOrder = [
+  'Алхимия',
+  'Шахтерство и Кузница',
+  'Броня и Оружие',
+  'Кулинария',
+  'Рыбалка',
+  'Гражданская одежда',
+  'Разное',
+];
+
+export { storageSheetsPath, storageCategoriesOrder };
