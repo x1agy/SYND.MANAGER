@@ -55,6 +55,13 @@ const getStorageCommands = () => {
     addOptions(addCommand('w')).toJSON(),
 
     new SlashCommandBuilder()
+      .setName('inv')
+      .setDescription(
+        'Провести инвентаризацию склада (сравнить с таблицей и зафиксировать расхождения)'
+      )
+      .toJSON(),
+
+    new SlashCommandBuilder()
       .setName('update_emoji')
       .setDescription('Обновить данные бота'),
   ];
@@ -131,7 +138,7 @@ const storageInteractionHandler = async (
         const results = [];
         const errors = [];
 
-        await inventoryService.loadInventory();
+        await inventoryService.performInventory(user);
 
         for (const update of itemUpdates) {
           const success = await inventoryService.updateItem(
@@ -167,20 +174,27 @@ const storageInteractionHandler = async (
     }
 
     switch (commandName) {
-      case 'inv_start': {
-        inventoryService.setWriteEnabled(false);
-        await interaction.editReply({
-          content:
-            '⌛ Запущена инвентаризация склада, использование команды /w запрещено',
-        });
-        break;
-      }
+      case 'inv': {
+        const userName = (
+          'nickname' in interaction.member!
+            ? interaction.member?.nickname ?? ''
+            : ''
+        ).match(/\[.+\]/)?.[0];
 
-      case 'inv_stop': {
-        inventoryService.setWriteEnabled(true);
+        if (!userName) {
+          await interaction.editReply({
+            content: '❌ Приведите свой никнейм к единому формату - [ваше имя]',
+          });
+          return;
+        }
+
+        const user = `${userName} ${interaction.user.id}`;
+        await inventoryService.performInventory(user);
+
+        const reply = `✅ Инвентаризация завершена.`;
+
         await interaction.editReply({
-          content:
-            '✅ Инвентаризация склада окончена, использование команды /w разрешено',
+          content: reply,
         });
         break;
       }

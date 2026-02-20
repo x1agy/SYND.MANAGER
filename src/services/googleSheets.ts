@@ -7,20 +7,6 @@ export class GoogleSheetsService {
   private sheets;
   private spreadsheetId: string;
 
-  private getMoscowTime(): string {
-    const now = new Date();
-    return new Intl.DateTimeFormat('ru-RU', {
-      timeZone: 'Europe/Moscow',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    }).format(now);
-  }
-
   constructor() {
     const auth = new google.auth.GoogleAuth({
       credentials: JSON.parse(GOOGLE_API),
@@ -93,21 +79,21 @@ export class GoogleSheetsService {
   }
 
   async addLogEntry(
-    userName: string,
-    action: string,
-    itemName: string,
-    quantity: number,
-    note: string = ''
+    entries: [
+      userName: string,
+      action: string,
+      timestamp: string,
+      itemName: string,
+      quantity: number
+    ][]
   ): Promise<void> {
     try {
-      const timestamp = this.getMoscowTime();
-
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
         range: `${storageSheetsPath.usersHistory}!A:E`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
-          values: [[userName, action, timestamp, itemName, quantity, note]],
+          values: [...entries],
         },
       });
     } catch (error) {
@@ -115,16 +101,16 @@ export class GoogleSheetsService {
     }
   }
 
-  async addHistoryEntry(itemName: string, quantity: number): Promise<void> {
+  async addHistoryEntry(
+    entries: [itemName: string, quantity: number, timestamp: string][]
+  ): Promise<void> {
     try {
-      const timestamp = this.getMoscowTime();
-
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
         range: `${storageSheetsPath.itemsHistory}!A:C`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
-          values: [[itemName, quantity, timestamp]],
+          values: [...entries],
         },
       });
     } catch (error) {

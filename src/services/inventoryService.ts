@@ -33,6 +33,20 @@ export class InventoryService {
     this.discordClient = client;
   }
 
+  private getMoscowTime(): string {
+    const now = new Date();
+    return new Intl.DateTimeFormat('ru-RU', {
+      timeZone: 'Europe/Moscow',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(now);
+  }
+
   async init(): Promise<void> {
     try {
       const ch =
@@ -124,14 +138,53 @@ export class InventoryService {
     if (!success) return false;
 
     const action = change > 0 ? 'положил' : 'взял';
-    this.googleSheets.addLogEntry(userName, action, item.name, change);
-    this.googleSheets.addHistoryEntry(item.name, newQuantity);
+    this.googleSheets.addLogEntry([
+      [userName, action, this.getMoscowTime(), item.name, change],
+    ]);
+    this.googleSheets.addHistoryEntry([
+      [item.name, newQuantity, this.getMoscowTime()],
+    ]);
 
     setTimeout(() => {
       this.loadInventory();
     });
 
     return true;
+  }
+
+  async performInventory(user: string) {
+    const sheetInventory = await this.googleSheets.getInventory();
+    const memoryInventory = this.inventory;
+
+    const memoryMap = new Map(memoryInventory.map((item) => [item.name, item]));
+
+    const changes: InventoryItem[] = [];
+
+    for (const sheetItem of sheetInventory) {
+      const memoryItem = memoryMap.get(sheetItem.name);
+      if (sheetItem.quantity !== memoryItem?.quantity) {
+        changes.push(sheetItem);
+      }
+    }
+
+    const timestamp = this.getMoscowTime();
+
+    if (changes.length > 0) {
+      this.googleSheets.addLogEntry(
+        changes.map((item) => [
+          user,
+          'инвентаризация',
+          timestamp,
+          item.name,
+          item.quantity!,
+        ])
+      );
+      this.googleSheets.addHistoryEntry(
+        changes.map((item) => [item.name, item.quantity!, timestamp])
+      );
+    }
+
+    this.inventory = sheetInventory;
   }
 
   getCurrentInventory(): InventoryItem[] {
