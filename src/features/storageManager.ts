@@ -53,14 +53,6 @@ const getStorageCommands = () => {
 
   return [
     addOptions(addCommand('w')).toJSON(),
-    addOptions(addCommand('i')).toJSON(),
-    // new SlashCommandBuilder()
-    //   .setName('inv_start')
-    //   .setDescription('Запретить использование команды /w'),
-
-    // new SlashCommandBuilder()
-    //   .setName('inv_stop')
-    //   .setDescription('Разрешить использование команды /w'),
 
     new SlashCommandBuilder()
       .setName('update_emoji')
@@ -75,7 +67,7 @@ const storageInteractionHandler = async (
 ) => {
   if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
     const auto = interaction as AutocompleteInteraction;
-    if (auto.commandName === 'w' || auto.commandName === 'i') {
+    if (auto.commandName === 'w') {
       const focused = String(auto.options.getFocused() ?? '').toLowerCase();
       const suggestions = inventoryService
         .getCurrentInventory()
@@ -93,16 +85,8 @@ const storageInteractionHandler = async (
   await interaction.deferReply({ ephemeral: true }).catch(() => null);
 
   try {
-    if (commandName === 'w' || commandName === 'i') {
+    if (commandName === 'w') {
       {
-        const isInv = commandName === 'i';
-        if (!inventoryService.writeEnabled && !isInv) {
-          await interaction.editReply({
-            content: 'Редактирование запрещено, проводится инвентаризация.',
-          });
-          return;
-        }
-
         const userName = (
           'nickname' in interaction.member!
             ? interaction.member?.nickname ?? ''
@@ -122,13 +106,6 @@ const storageInteractionHandler = async (
         for (let i = 1; i <= 5; i++) {
           const itemName = interaction.options.getString(`предмет${i}`);
           const quantity = interaction.options.getInteger(`количество${i}`);
-
-          if (isInv && (quantity ?? 0) < 0) {
-            await interaction.editReply({
-              content:
-                '❌ Отрицательные значения невозможны при инвентаризации',
-            });
-          }
 
           if (i === 1) {
             if (!itemName || quantity === null) {
@@ -160,19 +137,14 @@ const storageInteractionHandler = async (
           const success = await inventoryService.updateItem(
             update.name,
             update.quantity,
-            user,
-            isInv
+            user
           );
 
           if (success) {
             const item = inventoryService.getItemByName(update.name);
             const action = update.quantity > 0 ? 'Добавлено' : 'Взято';
             const emoji = inventoryService.emoji[item?.emoji ?? ''] ?? '';
-            results.push(
-              `${isInv ? 'Инвентаризировано' : action} ${
-                update.quantity
-              } ${emoji} ${item?.name}`
-            );
+            results.push(`${action} ${update.quantity} ${emoji} ${item?.name}`);
           } else {
             errors.push(`❌ Не удалось обновить предмет: ${update.name}`);
           }

@@ -75,7 +75,7 @@ export class InventoryService {
   async loadInventory(): Promise<void> {
     this.inventory = await this.googleSheets.getInventory();
     if (this.storageChannel) {
-      await this.postInventoryMessages();
+      this.postInventoryMessages();
     }
   }
 
@@ -92,51 +92,40 @@ export class InventoryService {
   async updateItem(
     name: string,
     change: number,
-    userName: string,
-    isInvent: boolean
+    userName: string
   ): Promise<boolean> {
     const item = this.getItemByName(name);
     if (!this.writeEnabled) return false;
     if (!item) return false;
 
-    const newQuantity = isInvent ? change : (item.quantity ?? 0) + change;
+    const newQuantity = (item.quantity ?? 0) + change;
 
     if (newQuantity < 0) {
-      const channel = (await this.discordClient.channels.fetch(
-        ALERT_CHAT_ID
-      )) as TextChannel;
-
-      const message = `
-          🚨 **ВНИМАНИЕ: ОТРИЦАТЕЛЬНЫЙ ОСТАТОК!**
-          📦 **Предмет:** ${this.emoji[item.emoji ?? ''] ?? ''} ${item.name}
-          👤 **Пользователь:** ${userName}
-          📊 **Изменение:** ${change > 0 ? '+' : ''}${change}
-          🧮 **Новый остаток:** ${newQuantity}
-          ⏰ **Время:** ${new Date().toLocaleString('ru-RU')}
-          <@&1467630587803209901>
-        `.trim();
-
-      await channel.send(message);
+      this.discordClient.channels.fetch(ALERT_CHAT_ID).then((channel) =>
+        (channel as unknown as TextChannel)?.send(
+          `
+            🚨 **ВНИМАНИЕ: ОТРИЦАТЕЛЬНЫЙ ОСТАТОК!**
+            📦 **Предмет:** ${this.emoji[item.emoji ?? ''] ?? ''} ${item.name}
+            👤 **Пользователь:** ${userName}
+            📊 **Изменение:** ${change > 0 ? '+' : ''}${change}
+            🧮 **Новый остаток:** ${newQuantity}
+            ⏰ **Время:** ${new Date().toLocaleString('ru-RU')}
+            <@&1467630587803209901>
+          `.trim()
+        )
+      );
     }
 
     const success = await this.googleSheets.updateInventory(
       item.name,
       newQuantity
     );
+
     if (!success) return false;
 
-    if (isInvent) {
-      await this.googleSheets.addLogEntry(
-        userName,
-        'инвентаризация',
-        item.name,
-        change
-      );
-    } else {
-      const action = change > 0 ? 'положил' : 'взял';
-      await this.googleSheets.addLogEntry(userName, action, item.name, change);
-    }
-    await this.googleSheets.addHistoryEntry(item.name, newQuantity);
+    const action = change > 0 ? 'положил' : 'взял';
+    this.googleSheets.addLogEntry(userName, action, item.name, change);
+    this.googleSheets.addHistoryEntry(item.name, newQuantity);
 
     setTimeout(() => {
       this.loadInventory();
