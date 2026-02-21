@@ -55,7 +55,7 @@ const getStorageCommands = () => {
     addOptions(addCommand('w')).toJSON(),
 
     new SlashCommandBuilder()
-      .setName('inv')
+      .setName('i')
       .setDescription(
         'Провести инвентаризацию склада (сравнить с таблицей и зафиксировать расхождения)'
       )
@@ -138,7 +138,7 @@ const storageInteractionHandler = async (
         const results = [];
         const errors = [];
 
-        await inventoryService.performInventory(user);
+        await inventoryService.performInventory(user, false);
 
         for (const update of itemUpdates) {
           const success = await inventoryService.updateItem(
@@ -174,7 +174,7 @@ const storageInteractionHandler = async (
     }
 
     switch (commandName) {
-      case 'inv': {
+      case 'i': {
         const userName = (
           'nickname' in interaction.member!
             ? interaction.member?.nickname ?? ''
@@ -189,7 +189,7 @@ const storageInteractionHandler = async (
         }
 
         const user = `${userName} ${interaction.user.id}`;
-        await inventoryService.performInventory(user);
+        await inventoryService.performInventory(user, true);
 
         const reply = `✅ Инвентаризация завершена.`;
 
