@@ -152,10 +152,9 @@ export class InventoryService {
     return true;
   }
 
-  async performInventory(user: string, isInv: boolean) {
+  async performInventory(user: string) {
     const sheetInventory = await this.googleSheets.getInventory();
     const memoryInventory = [...this.inventory];
-    this.inventory = sheetInventory;
 
     const memoryMap = new Map(memoryInventory.map((item) => [item.name, item]));
 
@@ -169,22 +168,6 @@ export class InventoryService {
     }
 
     const timestamp = this.getMoscowTime();
-
-    if (isInv) {
-      this.googleSheets.addLogEntry(
-        sheetInventory.map((item) => [
-          user,
-          'инвентаризация',
-          timestamp,
-          item.name,
-          item.quantity!,
-        ])
-      );
-      this.googleSheets.addHistoryEntry(
-        sheetInventory.map((item) => [item.name, item.quantity!, timestamp])
-      );
-      return;
-    }
 
     if (changes.length > 0) {
       this.googleSheets.addLogEntry(
@@ -200,6 +183,8 @@ export class InventoryService {
         changes.map((item) => [item.name, item.quantity!, timestamp])
       );
     }
+
+    this.inventory = sheetInventory;
   }
 
   getCurrentInventory(): InventoryItem[] {
