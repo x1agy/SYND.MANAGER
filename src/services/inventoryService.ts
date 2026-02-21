@@ -154,8 +154,8 @@ export class InventoryService {
 
   async performInventory(user: string, isInv: boolean) {
     const sheetInventory = await this.googleSheets.getInventory();
+    const memoryInventory = [...this.inventory];
     this.inventory = sheetInventory;
-    const memoryInventory = this.inventory;
 
     const memoryMap = new Map(memoryInventory.map((item) => [item.name, item]));
 
