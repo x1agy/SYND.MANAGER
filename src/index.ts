@@ -6,6 +6,10 @@ import {
 } from './features/storageManager';
 import { DISCORD_TOKEN, SYND_CHANNEL } from './constants/envVars';
 import { handleVoiceStateUpdate } from './features/voiceCreate';
+import {
+  contractsInteractionHandler,
+  getContractsCommands,
+} from './features/contractsManager';
 
 const client = new Client({
   intents: [
@@ -26,7 +30,7 @@ client.once('ready', async () => {
   await inventoryService.loadInventory();
   await inventoryService.init();
 
-  const commands = [...getStorageCommands()];
+  const commands = [...getStorageCommands(), ...getContractsCommands()];
 
   const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
@@ -44,6 +48,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 
 client.on('interactionCreate', async (interaction) => {
   storageInteractionHandler(interaction, inventoryService, client);
+  contractsInteractionHandler(interaction);
 });
 
 client.on('error', console.error);
