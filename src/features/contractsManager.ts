@@ -13,12 +13,12 @@ return [
     .setDescription('Добавить отчет о контракте')
     .addIntegerOption((option) =>
       option
-        .setName('Кол-во эссенции')
-        .setDescription('Колличество эссенций')
+        .setName('кол-во_эссенции')
+        .setDescription('Колличество эссенции')
         .setRequired(true)
     )
     .addAttachmentOption((option) =>
-      option.setName('Скриншот').setDescription('Скриншот').setRequired(true)
+      option.setName('скриншот').setDescription('Скриншот').setRequired(true)
     )
     .toJSON(),
 ];
