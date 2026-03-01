@@ -2,6 +2,7 @@ import { google } from "googleapis";
 import { GoogleAuth } from "google-auth-library";
 import { CONTRACTS_SHEET_ID, GOOGLE_API } from "../constants/envVars";
 import { contractsSheetsPaths } from "../constants/contracts";
+import { getMoscowTime } from '../utils/time';
 
 class ContractsService {
     private sheets: any;
@@ -20,7 +21,7 @@ class ContractsService {
         essenceNumber: number,
         screenshotLink: string
     ): Promise<void> {
-        const values = [[name, essenceNumber, screenshotLink, new Date().toISOString()]];
+        const values = [[name, essenceNumber, screenshotLink, getMoscowTime()]];
 
         await this.sheets.spreadsheets.values.append({
             spreadsheetId: CONTRACTS_SHEET_ID,

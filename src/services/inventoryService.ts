@@ -3,6 +3,7 @@ import { GoogleSheetsService } from './googleSheets';
 import { ALERT_CHAT_ID, STORAGE_CHAT_ID } from '../constants/envVars';
 import { InventoryItem } from '../types/inventory';
 import { storageCategoriesOrder } from '../constants/storage';
+import { getMoscowTime } from '../utils/time';
 
 function stringToHexColor(str: string): `#${string}` {
   let hash = 0;
@@ -31,20 +32,6 @@ export class InventoryService {
   constructor(client: Client) {
     this.googleSheets = new GoogleSheetsService();
     this.discordClient = client;
-  }
-
-  private getMoscowTime(): string {
-    const now = new Date();
-    return new Intl.DateTimeFormat('ru-RU', {
-      timeZone: 'Europe/Moscow',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    }).format(now);
   }
 
   async init(): Promise<void> {
@@ -139,10 +126,10 @@ export class InventoryService {
 
     const action = change > 0 ? 'положил' : 'взял';
     this.googleSheets.addLogEntry([
-      [userName, action, this.getMoscowTime(), item.name, change],
+      [userName, action, getMoscowTime(), item.name, change],
     ]);
     this.googleSheets.addHistoryEntry([
-      [item.name, newQuantity, this.getMoscowTime()],
+      [item.name, newQuantity, getMoscowTime()],
     ]);
 
     setTimeout(() => {
@@ -168,7 +155,7 @@ export class InventoryService {
       }
     }
 
-    const timestamp = this.getMoscowTime();
+    const timestamp = getMoscowTime();
 
     if (isInv) {
       this.googleSheets.addLogEntry(
