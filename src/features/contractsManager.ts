@@ -8,22 +8,19 @@ SlashCommandBuilder,
 
 const getContractsCommands = () => {
 return [
-    new SlashCommandBuilder()
-        .setName('k')
-        .setDescription('Добавить отчет о контракте')
-        .addIntegerOption((option) =>
-            option
-                .setName('essence_number')
-                .setDescription('Колличество эссенций')
-                .setRequired(true)
-        )
-        .addAttachmentOption((option) =>
-            option
-                .setName('screenshot')
-                .setDescription('Скриншот')
-                .setRequired(true)
-        )
-        .toJSON(),
+  new SlashCommandBuilder()
+    .setName('k')
+    .setDescription('Добавить отчет о контракте')
+    .addIntegerOption((option) =>
+      option
+        .setName('Кол-во эссенции')
+        .setDescription('Колличество эссенций')
+        .setRequired(true)
+    )
+    .addAttachmentOption((option) =>
+      option.setName('Скриншот').setDescription('Скриншот').setRequired(true)
+    )
+    .toJSON(),
 ];
 };
 
@@ -39,8 +36,8 @@ if (commandName !== 'k') return;
 await interaction.deferReply({ ephemeral: true }).catch(() => null);
 
 try {
-    const essenceNumber = interaction.options.getInteger('essence_number');
-    const screenshot = interaction.options.getAttachment('screenshot');
+    const essenceNumber = interaction.options.getInteger('Кол-во эссенции');
+    const screenshot = interaction.options.getAttachment('Скриншот');
 
     if (!essenceNumber || !screenshot) {
         await interaction.editReply({
