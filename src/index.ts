@@ -5,9 +5,11 @@ import {
   storageInteractionHandler,
 } from './features/storageManager';
 import { DISCORD_TOKEN, SYND_CHANNEL } from './constants/envVars';
+import { handleVoiceStateUpdate } from './features/voiceCreate';
 
 const client = new Client({
   intents: [
+    GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
@@ -34,6 +36,10 @@ client.once('ready', async () => {
   );
 
   console.log('✅ Команды зарегистрированы');
+});
+
+client.on('voiceStateUpdate', (oldState, newState) => {
+  handleVoiceStateUpdate(oldState, newState);
 });
 
 client.on('interactionCreate', async (interaction) => {
