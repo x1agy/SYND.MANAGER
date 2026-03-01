@@ -36,8 +36,8 @@ if (commandName !== 'k') return;
 await interaction.deferReply({ ephemeral: true }).catch(() => null);
 
 try {
-    const essenceNumber = interaction.options.getInteger('Кол-во эссенции');
-    const screenshot = interaction.options.getAttachment('Скриншот');
+    const essenceNumber = interaction.options.getInteger('кол-во_эссенции');
+    const screenshot = interaction.options.getAttachment('скриншот');
 
     if (!essenceNumber || !screenshot) {
         await interaction.editReply({
