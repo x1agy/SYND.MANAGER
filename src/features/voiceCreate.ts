@@ -2,16 +2,16 @@ import { VoiceState, ChannelType } from 'discord.js';
 import { VOICE_CATEGORY_ID } from '../constants/envVars';
 
 const CONFIG = {
-  '1475655487637950516': 2,
-  '1477658049949995048': 3,
-  '1475652243981340918': 4,
+  '1473794289342480539': 2,
+  '1473801170827874447': 3,
+  '1477673581184946286': 4,
 };
 
 const nameConfig = {
   2: '🎭｜tet-a-tet',
   3: '👁️｜Трио',
   4: '🍻｜Квартет',
-}
+};
 
 const channelsMap = new Map();
 
@@ -28,12 +28,13 @@ export async function handleVoiceStateUpdate(
     if (limit) {
       try {
         const newChannel = await guild.channels.create({
-          name: `${nameConfig[limit as keyof typeof nameConfig]} #${[...channelsMap.values()].filter((l) => l === limit).length + 1}`,
+          name: `${nameConfig[limit as keyof typeof nameConfig]} #${
+            [...channelsMap.values()].filter((l) => l === limit).length + 1
+          }`,
           type: ChannelType.GuildVoice,
           parent: newState.channel.parentId,
           userLimit: limit,
-          position: (newState.channel.rawPosition || 0),
-          
+          position: newState.channel.rawPosition || 0,
         });
 
         newChannel.lockPermissions();
