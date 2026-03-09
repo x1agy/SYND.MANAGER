@@ -60,12 +60,13 @@ const contractsInteractionHandler = async (
 
   await interaction.deferReply({ ephemeral: true }).catch(() => {});
 
-  // helper to safely reply or edit depending on state
   const safeReply = async (content: string) => {
-    if (interaction.deferred || interaction.replied) {
+    try {
       await interaction.editReply({ content });
-    } else {
-      await interaction.reply({ content, ephemeral: true });
+    } catch (err: any) {
+      if (!interaction.replied) {
+        await interaction.reply({ content, flags: 64 });
+      }
     }
   };
 
