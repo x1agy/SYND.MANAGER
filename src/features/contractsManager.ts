@@ -58,7 +58,16 @@ const contractsInteractionHandler = async (
 
   if (commandName !== 'k') return;
 
-  await interaction.deferReply({ ephemeral: true }).catch(() => null);
+  await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+  // helper to safely reply or edit depending on state
+  const safeReply = async (content: string) => {
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply({ content });
+    } else {
+      await interaction.reply({ content, ephemeral: true });
+    }
+  };
 
   try {
     const userName = (
@@ -68,9 +77,9 @@ const contractsInteractionHandler = async (
     ).match(/\[.+\]/)?.[0];
 
     if (!userName) {
-      await interaction.editReply({
-        content: '❌ Приведите свой никнейм к единому формату - [ваше имя]',
-      });
+      await safeReply(
+        '❌ Приведите свой никнейм к единому формату - [ваше имя]'
+      );
       return;
     }
 
@@ -85,10 +94,9 @@ const contractsInteractionHandler = async (
 
       if (i === 1) {
         if (!essenceNumber || !screenshot) {
-          await interaction.editReply({
-            content:
-              '❌ Первый контракт с количеством эссенции и скриншотом обязателен!',
-          });
+          await safeReply(
+            '❌ Первый контракт с количеством эссенции и скриншотом обязателен!'
+          );
           return;
         }
         contractUpdates.push({ essenceNumber, screenshot });
@@ -105,9 +113,7 @@ const contractsInteractionHandler = async (
     }
 
     if (errors.length > 0) {
-      await interaction.editReply({
-        content: errors.join('\n'),
-      });
+      await safeReply(errors.join('\n'));
       return;
     }
 
@@ -155,24 +161,19 @@ const contractsInteractionHandler = async (
       message = '❌ Не удалось добавить контракты';
     }
 
-    try {
-      await interaction.editReply({
-        content: message,
-      });
-    } catch (error) {
-      await interaction.reply({
-        content: message,
-        ephemeral: true,
-      });
-    }
+    await safeReply(message);
   } catch (error) {
     console.error('Ошибка обработки команды k:', error);
 
-    try {
-      await interaction.editReply({
-        content: '❌ Произошла ошибка при выполнении команды',
-      });
-    } catch (e) {
+    if (interaction.deferred || interaction.replied) {
+      try {
+        await interaction.editReply({
+          content: '❌ Произошла ошибка при выполнении команды',
+        });
+      } catch (e) {
+        console.error('Не удалось редактировать ответ после ошибки:', e);
+      }
+    } else {
       await interaction.reply({
         content: '❌ Произошла ошибка при выполнении команды',
         ephemeral: true,
