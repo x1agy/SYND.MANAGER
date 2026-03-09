@@ -32,6 +32,27 @@ class ContractsService {
             },
         });
     }
+
+    async addReports(
+        name: string,
+        reports: Array<{ essenceNumber: number; screenshotLink: string }>
+    ): Promise<void> {
+        const values = reports.map(report => [
+            name,
+            report.essenceNumber,
+            report.screenshotLink,
+            getMoscowTime()
+        ]);
+
+        await this.sheets.spreadsheets.values.append({
+            spreadsheetId: CONTRACTS_SHEET_ID,
+            range: `${contractsSheetsPaths.contracts}!A:D`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+                values,
+            },
+        });
+    }
 }
 
 export default new ContractsService();

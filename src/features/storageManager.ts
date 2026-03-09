@@ -191,10 +191,8 @@ const storageInteractionHandler = async (
         const user = `${userName} ${interaction.user.id}`;
         await inventoryService.performInventory(user, true);
 
-        const reply = `✅ Инвентаризация завершена.`;
-
         await interaction.editReply({
-          content: reply,
+          content: `✅ Инвентаризация завершена.`,
         });
         break;
       }
