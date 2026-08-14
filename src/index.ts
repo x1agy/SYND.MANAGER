@@ -10,6 +10,10 @@ import {
   contractsInteractionHandler,
   getContractsCommands,
 } from './features/contractsManager';
+import {
+  discordInteractionHandler,
+  getDiscordCommands,
+} from './features/discordManager';
 
 const client = new Client({
   intents: [
@@ -30,7 +34,11 @@ client.once('ready', async () => {
   await inventoryService.loadInventory();
   await inventoryService.init();
 
-  const commands = [...getStorageCommands(), ...getContractsCommands()];
+  const commands = [
+    ...getStorageCommands(),
+    ...getContractsCommands(),
+    ...getDiscordCommands(),
+  ];
 
   const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
@@ -49,6 +57,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 client.on('interactionCreate', async (interaction) => {
   storageInteractionHandler(interaction, inventoryService, client);
   contractsInteractionHandler(interaction);
+  discordInteractionHandler(interaction, client);
 });
 
 client.on('error', console.error);
