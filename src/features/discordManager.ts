@@ -58,7 +58,7 @@ const discordInteractionHandler = async (
     const usernames = [...members.values()]
       .map((member) => member.user)
       .filter((user) => Boolean(user) && !user.bot)
-      .map((user) => `${user.username} ${user.id}`);
+      .map((user) => `${user.id}`);
 
     const fileContent = usernames.join('\n');
 
