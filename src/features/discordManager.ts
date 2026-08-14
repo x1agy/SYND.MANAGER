@@ -1,4 +1,10 @@
-import { CacheType, Client, Interaction, SlashCommandBuilder } from 'discord.js';
+import {
+  CacheType,
+  Client,
+  Interaction,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+} from 'discord.js';
 
 const getDiscordCommands = () => {
   return [
@@ -24,10 +30,31 @@ const discordInteractionHandler = async (
     return;
   }
 
+  const member = interaction.member;
+  const permissions =
+    member && 'permissions' in member ? member.permissions : null;
+
+  const isAdmin = Boolean(
+    permissions &&
+      typeof permissions !== 'string' &&
+      (permissions.has(PermissionFlagsBits.Administrator) ||
+        permissions.has(PermissionFlagsBits.ManageGuild))
+  );
+
+  if (!isAdmin) {
+    await interaction.reply({
+      content: '❌ Только администраторы могут использовать эту команду.',
+      ephemeral: true,
+    });
+    return;
+  }
+
   await interaction.deferReply({ ephemeral: true }).catch(() => null);
 
   try {
-    const members = await interaction.guild.members.fetch().catch(() => new Map());
+    const members = await interaction.guild.members
+      .fetch()
+      .catch(() => new Map());
     const usernames = [...members.values()]
       .map((member) => member.user)
       .filter((user) => Boolean(user) && !user.bot)
