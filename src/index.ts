@@ -4,7 +4,11 @@ import {
   getStorageCommands,
   storageInteractionHandler,
 } from './features/storageManager';
-import { DISCORD_TOKEN, SYND_CHANNEL } from './constants/envVars';
+import {
+  AVAILABLE_CHANNELS,
+  DISCORD_TOKEN,
+  SYND_CHANNEL,
+} from './constants/envVars';
 import { handleVoiceStateUpdate } from './features/voiceCreate';
 import {
   contractsInteractionHandler,
@@ -27,6 +31,18 @@ const client = new Client({
 });
 
 const inventoryService = new InventoryService(client);
+const commands = [
+  ...getStorageCommands(),
+  ...getContractsCommands(),
+  ...getDiscordCommands(),
+];
+
+async function registerCommandsForGuild(guildId: string) {
+  const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
+  await rest.put(Routes.applicationGuildCommands(client.user!.id, guildId), {
+    body: commands,
+  });
+}
 
 client.once('ready', async () => {
   console.log(`✅ Бот запущен как ${client.user?.tag}`);
@@ -34,18 +50,19 @@ client.once('ready', async () => {
   await inventoryService.loadInventory();
   await inventoryService.init();
 
-  const commands = [
-    ...getStorageCommands(),
-    ...getContractsCommands(),
-    ...getDiscordCommands(),
-  ];
+  const guildIds =
+    AVAILABLE_CHANNELS.length > 0
+      ? AVAILABLE_CHANNELS
+      : [...client.guilds.cache.keys()];
 
-  const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
-
-  await rest.put(
-    Routes.applicationGuildCommands(client.user!.id, SYND_CHANNEL),
-    { body: commands }
-  );
+  for (const guildId of guildIds) {
+    await registerCommandsForGuild(guildId).catch((error) => {
+      console.error(
+        `❌ Не удалось зарегистрировать команды для сервера ${guildId}:`,
+        error
+      );
+    });
+  }
 
   console.log('✅ Команды зарегистрированы');
 });
@@ -55,8 +72,12 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-  storageInteractionHandler(interaction, inventoryService, client);
-  contractsInteractionHandler(interaction);
+  if (!interaction.guildId) return;
+
+  if (interaction.guildId === SYND_CHANNEL) {
+    storageInteractionHandler(interaction, inventoryService, client);
+    contractsInteractionHandler(interaction);
+  }
   discordInteractionHandler(interaction, client);
 });
 
