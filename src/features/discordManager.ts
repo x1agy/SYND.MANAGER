@@ -4,15 +4,39 @@ import {
   Interaction,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  User,
 } from 'discord.js';
 
+const memberListCommands: Record<
+  string,
+  {
+    description: string;
+    replyContent: string;
+    fileName: string;
+    mapUser: (user: User) => string;
+  }
+> = {
+  logins: {
+    description: 'Скачать список логинов участников сервера',
+    replyContent: 'Список логинов участников сервера:',
+    fileName: 'server-members.txt',
+    mapUser: (user) => user.username,
+  },
+  ids: {
+    description: 'Скачать список ID участников сервера',
+    replyContent: 'Список ID участников сервера:',
+    fileName: 'server-members-ids.txt',
+    mapUser: (user) => user.id,
+  },
+};
+
 const getDiscordCommands = () => {
-  return [
+  return Object.entries(memberListCommands).map(([name, command]) =>
     new SlashCommandBuilder()
-      .setName('members')
-      .setDescription('Скачать список логинов участников сервера')
-      .toJSON(),
-  ];
+      .setName(name)
+      .setDescription(command.description)
+      .toJSON()
+  );
 };
 
 const discordInteractionHandler = async (
@@ -20,7 +44,9 @@ const discordInteractionHandler = async (
   client: Client
 ) => {
   if (!interaction.isChatInputCommand()) return;
-  if (interaction.commandName !== 'members') return;
+
+  const command = memberListCommands[interaction.commandName];
+  if (!command) return;
 
   if (!interaction.guild) {
     await interaction.reply({
@@ -55,19 +81,19 @@ const discordInteractionHandler = async (
     const members = await interaction.guild.members
       .fetch()
       .catch(() => new Map());
-    const usernames = [...members.values()]
+    const lines = [...members.values()]
       .map((member) => member.user)
       .filter((user) => Boolean(user) && !user.bot)
-      .map((user) => `${user.id}`);
+      .map((user) => command.mapUser(user));
 
-    const fileContent = usernames.join('\n');
+    const fileContent = lines.join('\n');
 
     await interaction.editReply({
-      content: 'Список логинов участников сервера:',
+      content: command.replyContent,
       files: [
         {
           attachment: Buffer.from(fileContent, 'utf8'),
-          name: 'server-members.txt',
+          name: command.fileName,
         },
       ],
     });
