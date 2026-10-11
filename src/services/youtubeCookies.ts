@@ -37,29 +37,13 @@ function normalizeCookies(value: string): string {
 export interface YouTubeCookies {
   args: string[];
   cleanup: () => void;
-  source: 'env' | 'file' | 'none';
-  youtubeCount: number | null;
-  expiredCount: number | null;
 }
 
 export function prepareYouTubeCookies(env: NodeJS.ProcessEnv = process.env): YouTubeCookies {
   if (!env.YT_DLP_COOKIES?.trim()) {
-    return {
-      args: env.YT_DLP_COOKIES_PATH ? ['--cookies', env.YT_DLP_COOKIES_PATH] : [],
-      cleanup: () => {}, source: env.YT_DLP_COOKIES_PATH ? 'file' : 'none',
-      youtubeCount: null, expiredCount: null,
-    };
+    return { args: env.YT_DLP_COOKIES_PATH ? ['--cookies', env.YT_DLP_COOKIES_PATH] : [], cleanup: () => {} };
   }
   const content = normalizeCookies(env.YT_DLP_COOKIES);
-  const now = Math.floor(Date.now() / 1000);
-  const youtubeRows = content.split('\n').filter((line) => {
-    const domain = line.split('\t')[0]?.replace(/^#HttpOnly_/, '').replace(/^\./, '');
-    return domain === 'youtube.com' || domain?.endsWith('.youtube.com');
-  });
-  const expiredCount = youtubeRows.filter((line) => {
-    const expires = Number(line.split('\t')[4]);
-    return expires > 0 && expires <= now;
-  }).length;
   // yt-dlp requires a file. Each invocation gets its own private, temporary cookie jar.
   const directory = mkdtempSync(join(tmpdir(), 'synd-youtube-'));
   const path = join(directory, 'cookies.txt');
@@ -73,5 +57,5 @@ export function prepareYouTubeCookies(env: NodeJS.ProcessEnv = process.env): You
     cleanup();
     throw error;
   }
-  return { args: ['--cookies', path], cleanup, source: 'env', youtubeCount: youtubeRows.length, expiredCount };
+  return { args: ['--cookies', path], cleanup };
 }

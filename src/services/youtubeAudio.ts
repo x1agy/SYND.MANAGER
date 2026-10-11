@@ -12,7 +12,7 @@ const downloader = () => {
   return process.env.YT_DLP_PATH || (existsSync(bundled) ? bundled : 'yt-dlp');
 };
 const baseArgs = () => [
-  '--ignore-config', '--no-playlist', '--no-progress',
+  '--ignore-config', '--no-playlist', '--no-progress', '--no-warnings',
   '--socket-timeout', '15', '--retries', '2',
   '--js-runtimes', `node:${process.execPath}`,
 ];
@@ -39,8 +39,6 @@ export function normalizeYouTubeUrl(input: string): string {
 
 export async function getYouTubeTitle(url: string): Promise<string> {
   const cookies = prepareYouTubeCookies();
-  // Log configuration and counts only; never cookie values or authentication headers.
-  console.log(`[YouTube cookies] source=${cookies.source}, youtube=${cookies.youtubeCount ?? 'unknown'}, expired=${cookies.expiredCount ?? 'unknown'}`);
   try {
     const { stdout } = await execFileAsync(downloader(), [...baseArgs(), ...cookies.args, '--skip-download', '--dump-json', '--', url], {
       timeout: 30_000, maxBuffer: 4 * 1024 * 1024, windowsHide: true,
@@ -57,16 +55,7 @@ export async function getYouTubeTitle(url: string): Promise<string> {
     const stderr = (error as { stderr?: string }).stderr || '';
     console.error('Ошибка получения видео YouTube:', stderr.slice(-2000) || (error as Error).message);
     if (/Sign in to confirm|cookies-for-the-authentication|--cookies-for-the-authentication/i.test(stderr)) {
-      if (cookies.source === 'none') {
-        throw new Error('YouTube требует авторизацию. YT_DLP_COOKIES и YT_DLP_COOKIES_PATH отсутствуют в окружении запущенного бота.');
-      }
-      if (cookies.youtubeCount === 0) {
-        throw new Error('YT_DLP_COOKIES загружены, но cookies для youtube.com отсутствуют. Экспортируйте cookies YouTube заново.');
-      }
-      if (cookies.youtubeCount !== null && cookies.expiredCount === cookies.youtubeCount) {
-        throw new Error('YT_DLP_COOKIES загружены, но срок всех cookies YouTube истёк. Экспортируйте новые cookies.');
-      }
-      throw new Error('Cookies переданы в yt-dlp, но YouTube всё равно требует проверку. Наличие cookies не гарантирует действующую сессию. Нужны свежие cookies; подробности — в журнале бота.');
+      throw new Error('YouTube требует авторизацию. Настройте YT_DLP_COOKIES или YT_DLP_COOKIES_PATH на сервере бота.');
     }
     throw new Error('Не удалось открыть видео. Проверьте доступность ссылки и обновите yt-dlp.');
   } finally {
