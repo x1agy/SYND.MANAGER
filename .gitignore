@@ -4,3 +4,5 @@ dist
 credentials.json
 .test.env
 .synd.env
+tools/
+.npm-cache/

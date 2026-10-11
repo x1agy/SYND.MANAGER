@@ -3,15 +3,23 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
   "scripts": {
+    "prebuild": "node scripts/setup-music.js --if-missing",
     "build": "tsc",
     "start": "node dist/index.js",
+    "setup:music": "node scripts/setup-music.js",
     "dev": "nodemon --ext ts,js,json --exec \"tsc && npm run start\" --watch \"src/**/*\""
   },
   "dependencies": {
+    "@discordjs/voice": "^0.19.2",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.3",
-    "googleapis": "^171.1.0"
+    "ffmpeg-static": "^5.3.0",
+    "googleapis": "^171.1.0",
+    "opusscript": "^0.0.8"
   },
   "devDependencies": {
     "@types/node": "^25.2.0",

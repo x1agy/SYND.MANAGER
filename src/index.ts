@@ -10,6 +10,7 @@ import {
   SYND_CHANNEL,
 } from './constants/envVars';
 import { handleVoiceStateUpdate } from './features/voiceCreate';
+import { getMusicCommands, handleMusicVoiceStateUpdate, musicInteractionHandler } from './features/musicManager';
 import {
   contractsInteractionHandler,
   getContractsCommands,
@@ -35,6 +36,7 @@ const commands = [
   ...getStorageCommands(),
   ...getContractsCommands(),
   ...getDiscordCommands(),
+  ...getMusicCommands(),
 ];
 
 async function registerCommandsForGuild(guildId: string) {
@@ -68,7 +70,8 @@ client.once('ready', async () => {
 });
 
 client.on('voiceStateUpdate', (oldState, newState) => {
-  handleVoiceStateUpdate(oldState, newState);
+  handleMusicVoiceStateUpdate(oldState, newState);
+  void handleVoiceStateUpdate(oldState, newState).catch(console.error);
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -79,6 +82,7 @@ client.on('interactionCreate', async (interaction) => {
     contractsInteractionHandler(interaction);
   }
   discordInteractionHandler(interaction, client);
+  void musicInteractionHandler(interaction).catch(console.error);
 });
 
 client.on('error', console.error);
