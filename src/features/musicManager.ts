@@ -1,5 +1,5 @@
 import {
-  ChannelType, escapeMarkdown, Guild, Interaction, PermissionFlagsBits,
+  ChannelType, escapeMarkdown, Guild, Interaction, MessageFlags, PermissionFlagsBits,
   SlashCommandBuilder, VoiceBasedChannel, VoiceState,
 } from 'discord.js';
 import {
@@ -84,7 +84,7 @@ class MusicSession {
         console.error('Ошибка воспроизведения YouTube:', error);
         this.queue.finish(track);
       });
-      this.player.play(createAudioResource(this.source.stream, { inputType: StreamType.Raw, metadata: track }));
+      this.player.play(createAudioResource(this.source.stream, { inputType: StreamType.OggOpus, metadata: track }));
     } catch (error) {
       console.error('Ошибка запуска трека:', error);
       // Avoid recursion when several consecutive tracks cannot start.
@@ -106,7 +106,7 @@ const trackLabel = (track: MusicTrack) => `${escapeMarkdown(track.title.slice(0,
 
 export async function musicInteractionHandler(interaction: Interaction): Promise<void> {
   if (!interaction.isChatInputCommand() || !['play', 'queue', 'clear-my-tracks'].includes(interaction.commandName)) return;
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   let reserved: MusicTrack | null = null;
   let session: MusicSession | undefined;
   try {

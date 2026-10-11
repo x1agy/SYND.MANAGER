@@ -4,6 +4,7 @@ import {
   Client,
   Interaction,
   InteractionType,
+  MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js';
 import { InventoryService } from '../services/inventoryService';
@@ -88,8 +89,9 @@ const storageInteractionHandler = async (
   if (!interaction.isChatInputCommand()) return;
 
   const { commandName } = interaction;
+  if (!['w', 'i', 'update_emoji'].includes(commandName)) return;
 
-  await interaction.deferReply({ ephemeral: true }).catch(() => null);
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   try {
     if (commandName === 'w') {

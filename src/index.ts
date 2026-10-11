@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
+import { Client, GatewayIntentBits, MessageFlags, Partials, REST, Routes } from 'discord.js';
 import { InventoryService } from './services/inventoryService';
 import {
   getStorageCommands,
@@ -32,6 +32,10 @@ const client = new Client({
 });
 
 const inventoryService = new InventoryService(client);
+const storageCommandNames = new Set(getStorageCommands().map((command) => command.name));
+const contractsCommandNames = new Set(getContractsCommands().map((command) => command.name));
+const discordCommandNames = new Set(getDiscordCommands().map((command) => command.name));
+const musicCommandNames = new Set(getMusicCommands().map((command) => command.name));
 const commands = [
   ...getStorageCommands(),
   ...getContractsCommands(),
@@ -77,12 +81,42 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.guildId) return;
 
-  if (interaction.guildId === SYND_CHANNEL) {
-    storageInteractionHandler(interaction, inventoryService, client);
-    contractsInteractionHandler(interaction);
+  try {
+    if (interaction.isAutocomplete()) {
+      if (interaction.guildId === SYND_CHANNEL && storageCommandNames.has(interaction.commandName)) {
+        await storageInteractionHandler(interaction, inventoryService, client);
+      }
+      return;
+    }
+    if (!interaction.isChatInputCommand()) return;
+
+    // Every interaction belongs to one handler. Other commands remain independent.
+    const name = interaction.commandName;
+    if (musicCommandNames.has(name)) {
+      await musicInteractionHandler(interaction);
+    } else if (discordCommandNames.has(name)) {
+      await discordInteractionHandler(interaction, client);
+    } else if (interaction.guildId === SYND_CHANNEL) {
+      if (storageCommandNames.has(name)) {
+        await storageInteractionHandler(interaction, inventoryService, client);
+      } else if (contractsCommandNames.has(name)) {
+        await contractsInteractionHandler(interaction);
+      }
+    }
+  } catch (error) {
+    console.error('Ошибка обработки взаимодействия:', error);
+    if (!interaction.isChatInputCommand()) return;
+    try {
+      const content = '❌ Не удалось выполнить команду. Попробуйте ещё раз.';
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply({ content });
+      } else {
+        await interaction.reply({ content, flags: MessageFlags.Ephemeral });
+      }
+    } catch (replyError) {
+      console.error('Не удалось сообщить об ошибке команды:', replyError);
+    }
   }
-  discordInteractionHandler(interaction, client);
-  void musicInteractionHandler(interaction).catch(console.error);
 });
 
 client.on('error', console.error);
