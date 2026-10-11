@@ -79,10 +79,8 @@ export function openYouTubeAudio(url: string, onError: (error: Error) => void): 
   let convert: ChildProcessWithoutNullStreams;
   try {
     convert = spawn(ffmpegPath, [
-      '-hide_banner', '-loglevel', 'error', '-i', 'pipe:0', '-vn',
-      '-c:a', 'libopus', '-b:a', '128k', '-ar', '48000', '-ac', '2',
-      '-frame_duration', '20', '-f', 'ogg', '-page_duration', '20000',
-      '-flush_packets', '1', 'pipe:1',
+    '-hide_banner', '-loglevel', 'error', '-i', 'pipe:0', '-vn',
+    '-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1',
     ], { windowsHide: true });
   } catch (error) {
     download.kill();
