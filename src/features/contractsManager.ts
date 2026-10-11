@@ -1,10 +1,6 @@
 import ContractsService from '../services/contractsService';
 
-import {
-CacheType,
-Interaction,
-SlashCommandBuilder,
-} from 'discord.js';
+import { CacheType, Interaction, SlashCommandBuilder } from 'discord.js';
 
 const getContractsCommands = () => {
   const addCommand = (name: string) => {
@@ -126,7 +122,7 @@ const contractsInteractionHandler = async (
       const update = contractUpdates[i]!;
       const { essenceNumber, screenshot } = update;
 
-      if (![13, 11, 9, 5, 7, 3].includes(essenceNumber)) {
+      if (![13, 11, 9, 5, 7, 3, 15].includes(essenceNumber)) {
         validatedErrors.push(
           `❌ Контракт #${i + 1}: Недопустимое количество эссенции!`
         );
