@@ -89,6 +89,8 @@ const storageInteractionHandler = async (
 
   const { commandName } = interaction;
 
+  if (!['w', 'i', 'update_emoji'].includes(commandName)) return;
+
   await interaction.deferReply({ ephemeral: true }).catch(() => null);
 
   try {
