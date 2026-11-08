@@ -21,6 +21,9 @@ jobs:
       - name: Install SSH tools
         run: sudo apt-get update && sudo apt-get install -y sshpass rsync
 
+      - name: Build container image
+        run: docker build --tag synd-bot:latest .
+
       - name: Trust VPS host key
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -56,6 +59,14 @@ jobs:
             -e 'ssh -o StrictHostKeyChecking=yes' \
             ./ "root@$VPS_HOST:/opt/synd/"
 
+      - name: Upload container image
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          docker save synd-bot:latest | sshpass -e ssh -o StrictHostKeyChecking=yes \
+            "root@$VPS_HOST" 'docker load'
+
       - name: Upload environment and start bot
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
@@ -65,4 +76,4 @@ jobs:
           printf '%s' "$ENV_FILE" | sshpass -e ssh -o StrictHostKeyChecking=yes \
             "root@$VPS_HOST" 'umask 077 && cat > /opt/synd/.env'
           sshpass -e ssh -o StrictHostKeyChecking=yes "root@$VPS_HOST" \
-            'cd /opt/synd && (docker compose up -d --build --remove-orphans || docker-compose up -d --build --remove-orphans)'
+            'cd /opt/synd && if docker compose version >/dev/null 2>&1; then docker compose up -d --remove-orphans; else docker-compose up -d --remove-orphans; fi'

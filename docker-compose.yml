@@ -1,6 +1,6 @@
 services:
   bot:
-    build: .
+    image: synd-bot:latest
     env_file:
       - .env
     restart: unless-stopped
