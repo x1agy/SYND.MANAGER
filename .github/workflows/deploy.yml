@@ -1,0 +1,68 @@
+name: Deploy bot
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install SSH tools
+        run: sudo apt-get update && sudo apt-get install -y sshpass rsync
+
+      - name: Trust VPS host key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          ssh-keyscan -H "$VPS_HOST" > ~/.ssh/known_hosts
+
+      - name: Prepare VPS
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=yes "root@$VPS_HOST" '
+            set -eu
+            if ! command -v docker >/dev/null; then
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y docker.io docker-compose-plugin || apt-get install -y docker.io docker-compose
+            fi
+            mkdir -p /opt/synd
+          '
+
+      - name: Upload application
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          sshpass -e rsync -az --delete \
+            --exclude .env \
+            --exclude node_modules \
+            --exclude dist \
+            --exclude .git \
+            -e 'ssh -o StrictHostKeyChecking=yes' \
+            ./ "root@$VPS_HOST:/opt/synd/"
+
+      - name: Upload environment and start bot
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          printf '%s' "$ENV_FILE" | sshpass -e ssh -o StrictHostKeyChecking=yes \
+            "root@$VPS_HOST" 'umask 077 && cat > /opt/synd/.env'
+          sshpass -e ssh -o StrictHostKeyChecking=yes "root@$VPS_HOST" \
+            'cd /opt/synd && (docker compose up -d --build --remove-orphans || docker-compose up -d --build --remove-orphans)'
