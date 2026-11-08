@@ -76,4 +76,5 @@ jobs:
           printf '%s' "$ENV_FILE" | sshpass -e ssh -o StrictHostKeyChecking=yes \
             "root@$VPS_HOST" 'umask 077 && cat > /opt/synd/.env'
           sshpass -e ssh -o StrictHostKeyChecking=yes "root@$VPS_HOST" \
-            'cd /opt/synd && if docker compose version >/dev/null 2>&1; then docker compose up -d --remove-orphans; else docker-compose up -d --remove-orphans; fi'
+            'docker rm -f synd_bot_1 synd-bot >/dev/null 2>&1 || true
+             docker run -d --name synd-bot --restart unless-stopped --env-file /opt/synd/.env synd-bot:latest'
